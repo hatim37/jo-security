@@ -35,7 +35,34 @@ public class JwtConfig {
     public PasswordEncoder passwordEncoder(){return new BCryptPasswordEncoder();}
 
 
-    // ─── TECHNICAL TOKENS ─────────────────────────────────────────────────────────
+
+    // ─── USER TOKENS
+
+    //Décoder les tokens utilisateurs avec clé public local
+    @Bean
+    @Qualifier("userJwtDecoder")
+    public JwtDecoder userJwtDecoder() {
+        return NimbusJwtDecoder
+                .withPublicKey(rsakeysConfig.publicKey())
+                .build();
+    }
+
+    //Encoder les tokens utilisateurs avec double clé en local
+    //@Bean
+    @Qualifier("userJwtEncoder")
+    public JwtEncoder userJwtEncoder() {
+        JWK jwk = new RSAKey.Builder(rsakeysConfig.publicKey())
+                .privateKey(rsakeysConfig.privateKey())
+                .keyID("user-key")
+                .build();
+        JWKSource<SecurityContext> source =
+                new ImmutableJWKSet<>(new JWKSet(jwk));
+        return new NimbusJwtEncoder(source);
+    }
+
+
+    // ─── TECHNICAL TOKENS
+
     //Génère clé RSA pour JWT inter-services
     @Bean
     @Qualifier("techRsaKey")
@@ -53,14 +80,12 @@ public class JwtConfig {
         }
     }
 
-
     //Expose clé public pour api inter-services
     @Bean
     @Qualifier("techJwkSource")
     public JWKSource<SecurityContext> techJwkSource(@Qualifier("techRsaKey") RSAKey techRsaKey) {
         return new ImmutableJWKSet<>(new JWKSet((JWK) techRsaKey));
     }
-
 
     //Encode token inter-services
     @Bean
@@ -69,7 +94,6 @@ public class JwtConfig {
     public JwtEncoder techJwtEncoder(@Qualifier("techJwkSource") JWKSource<SecurityContext> techJwkSource) {
         return new NimbusJwtEncoder(techJwkSource);
     }
-
 
     public JwtDecoder techJwtDecoder(@Qualifier("techRsaKey") RSAKey techRsaKey) {
         try {
@@ -80,6 +104,5 @@ public class JwtConfig {
             throw new RuntimeException(e);
         }
     }
-
 
 }
