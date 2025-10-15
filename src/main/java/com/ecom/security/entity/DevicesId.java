@@ -19,6 +19,7 @@ public class DevicesId {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Lob
+    @Column(unique = true)
     private String deviceId;
     private Instant createdAt;
     private Boolean active=false;
